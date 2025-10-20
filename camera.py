@@ -10,7 +10,7 @@ def get_stream_url(channel):
     streams = session.streams(f'https://www.twitch.tv/{channel}')
     return streams['best'].url if streams else None
 
-channel = 'n3on'
+channel = 'sleep2heal'
 server_url = 'http://127.0.0.1:8000/upload'  # Replace with server URL
 model = YOLO('yolov8n-face.pt')
 
