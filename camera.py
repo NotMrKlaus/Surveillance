@@ -10,8 +10,8 @@ def get_stream_url(channel):
     streams = session.streams(f'https://www.twitch.tv/{channel}')
     return streams['best'].url if streams else None
 
-channel = 'n3on'
-server_url = 'http://127.0.0.1:8000/upload'  # Replace with server URL
+channel = 'ronnyberger'
+server_url = 'http://127.0.0.2:8000/upload'  # Replace with server URL
 model = YOLO('yolov8n-face.pt')
 
 os.makedirs('low_confidence', exist_ok=True)
@@ -41,10 +41,10 @@ while True:
                 x1, y1, x2, y2 = map(int, best_face.xyxy[0])
                 
                 w, h = x2-x1, y2-y1
-                x1 = max(0, int(x1 - w*0.1))
-                y1 = max(0, int(y1 - h*0.1))
-                x2 = min(frame.shape[1], int(x2 + w*0.1))
-                y2 = min(frame.shape[0], int(y2 + h*0.1))
+                x1 = max(0, int(x1 - w*0.2))
+                y1 = max(0, int(y1 - h*0.2))
+                x2 = min(frame.shape[1], int(x2 + w*0.2))
+                y2 = min(frame.shape[0], int(y2 + h*0.2))
                 
                 face_crop = frame[y1:y2, x1:x2]
                 
