@@ -20,9 +20,8 @@ app.prepare(ctx_id=0, det_size=(320, 320))  # or (320, 320)
 
 
 class FaceRecognitionCamera:
-    def __init__(self, channel, server_url, db_config, save_local=False):
+    def __init__(self, channel, db_config, save_local=False):
         self.channel = channel
-        self.server_url = server_url
         self.save_local = save_local
         self.conn = psycopg2.connect(**db_config)
         #self.app = FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
@@ -117,15 +116,6 @@ class FaceRecognitionCamera:
                 new_capture_id = self.save_embedding(embedding, conf, filename)
                 print(f"{self.channel} New person capture {new_capture_id} saved")
 
-        # Send to server
-        _, img_encoded = cv2.imencode('.jpg', face_crop)
-        files = {'image': (f"{self.channel}_face_({framenumber}){int(time.time())}.jpg", img_encoded.tobytes(), 'image/jpeg')}
-        try:
-            requests.post(self.server_url, files=files, timeout=5)
-            print(f"{self.channel} Sent face: {conf:.2f}")
-        except requests.exceptions.ConnectionError:
-            print(f"{self.channel} Failed to send face")
-
         # Save locally
         if self.save_local:
             folder = f'{self.channel}_low_confidence' if 0.5 <= conf < 0.7 else f'{self.channel}_high_confidence' if conf >= 0.7 else None
@@ -166,11 +156,7 @@ class FaceRecognitionCamera:
 
 # === USAGE ===
 if __name__ == "__main__":
-    """db_config = {
-        "dbname": "face_db",
-        "user": "guri",
-        "password": "1004"
-    }"""
+
 
     db_config = {
     "host": "db.aulbtbeaabfwlnwycvsz.supabase.co",
@@ -183,9 +169,8 @@ if __name__ == "__main__":
 
     
 
-    server_url = 'http://127.0.0.1:8000/upload'
     channels = ['karii','irissiri129','jinnytty','fanfan','murakamisuigun','maral','michaaam','babybaby1111','etoiles']
-    cameras = [FaceRecognitionCamera(channel, server_url, db_config, save_local=True) for channel in channels]
+    cameras = [FaceRecognitionCamera(channel, db_config, save_local=True) for channel in channels]
     threads = [threading.Thread(target=cam.run) for cam in cameras]
 
     for t in threads:
