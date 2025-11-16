@@ -40,7 +40,7 @@ class FaceRecognitionCamera:
         return streams['best'].url if streams else None
     
     
-    def save_embedding(self, embedding, confidence, filename, threshold=0.7):
+    def save_embedding(self, embedding, confidence, filename, threshold=0.6):
         cur = self.conn.cursor()
         emb_str = '[' + ','.join(map(str, embedding.tolist())) + ']'
 
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     
 
     server_url = 'http://127.0.0.1:8000/upload'
-    channels = ['karii', 'ninadaddyisblack', 'nahyunworld', 'jinnytty', 'hello_kiko', 'fanfan', 'joeykaotyk', 'maimaittv', 'sunnys', 'michaaam']
+    channels = ['karii','irissiri129','jinnytty','fanfan','murakamisuigun','maral','michaaam','babybaby1111','etoiles']
     cameras = [FaceRecognitionCamera(channel, server_url, db_config, save_local=True) for channel in channels]
     threads = [threading.Thread(target=cam.run) for cam in cameras]
 
