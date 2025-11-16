@@ -8,9 +8,10 @@ import cv2
 app = FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
 app.prepare(ctx_id=0, det_size=(640, 640))
 
-def cluster_faces(folder_path, eps=0.55, min_samples=1):
+def cluster_faces(folder_path, eps=0.6, min_samples=1):
     embeddings = []
     image_paths = []
+    successful_images = []  # All images with embeddings
     
     for filename in os.listdir(folder_path):
         if filename.endswith(('.jpg', '.png')):
@@ -20,9 +21,15 @@ def cluster_faces(folder_path, eps=0.55, min_samples=1):
                 continue
             faces = app.get(img)
             if faces:
+                successful_images.append(img_path)  # Add ALL successful images here
                 embedding = faces[0].normed_embedding
                 embeddings.append(embedding)
                 image_paths.append(img_path)
+    
+    # Print ALL images with embeddings (even if not clustered)
+    print("Images with facial embeddings:")
+    for img_path in successful_images:
+        print(f" - {img_path}")
     
     if not embeddings:
         print("No valid faces found in folder")
@@ -31,11 +38,10 @@ def cluster_faces(folder_path, eps=0.55, min_samples=1):
     embeddings = np.array(embeddings)
     clustering = DBSCAN(eps=eps, min_samples=min_samples, metric='cosine').fit(embeddings)
     labels = clustering.labels_
-    
     unique_labels = set(labels) - {-1}
     num_people = len(unique_labels)
-    
     people_images = defaultdict(list)
+    
     for idx, label in enumerate(labels):
         if label != -1:
             people_images[label].append(image_paths[idx])
@@ -43,10 +49,10 @@ def cluster_faces(folder_path, eps=0.55, min_samples=1):
     return num_people, people_images
 
 # Usage
-folder = 'high_confidence'
+folder = 'ilrossopiubelloditwitch_high_confidence'
 num_people, people_images = cluster_faces(folder)
-print(f"Number of unique people: {num_people}")
+print(f"\nNumber of unique people: {num_people}")
 for label, images in people_images.items():
     print(f"Person {label}: {len(images)} images")
     for img_path in images:
-        print(f"  - {img_path}")
+        print(f" - {img_path}")

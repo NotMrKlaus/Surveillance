@@ -181,6 +181,8 @@ if __name__ == "__main__":
     }
 
 
+    
+
     server_url = 'http://127.0.0.1:8000/upload'
     channels = ['karii', 'ninadaddyisblack', 'nahyunworld', 'jinnytty', 'hello_kiko', 'fanfan', 'joeykaotyk', 'maimaittv', 'sunnys', 'michaaam']
     cameras = [FaceRecognitionCamera(channel, server_url, db_config, save_local=True) for channel in channels]

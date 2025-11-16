@@ -1,47 +1,41 @@
-from deepface import DeepFace
+from insightface.app import FaceAnalysis
 import os
-import tensorflow as tf
+import shutil
+import cv2
 
-# Silence TensorFlow warnings
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+app = FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+app.prepare(ctx_id=0, det_size=(640, 640))
 
-# Force GPU
-gpus = tf.config.list_physical_devices('GPU')
-if gpus:
-    tf.config.set_visible_devices(gpus[0], 'GPU')
-    tf.config.experimental.set_memory_growth(gpus[0], True)
-    print("GPU enabled")
-else:
-    print("CPU fallback")
+def debug_filter_face_images(folder_path):
+    results = []
+    
+    for filename in os.listdir(folder_path):
+        if filename.endswith(('.jpg', '.png')):
+            img_path = os.path.join(folder_path, filename)
+            img = cv2.imread(img_path)
+            
+            print(f"\n--- {filename} ---")
+            print(f"Image loaded: {img is not None}")
+            
+            if img is None:
+                print("❌ Image failed to load")
+                results.append((filename, False))
+                continue
+                
+            faces = app.get(img)
+            print(f"Faces found: {len(faces)}")
+            
+            if faces:
+                for i, face in enumerate(faces):
+                    print(f"  Face {i}: det_score={face.det_score:.3f}")
+                results.append((filename, True))
+            else:
+                print("❌ No faces detected")
+                results.append((filename, False))
+    
+    print(f"\n=== SUMMARY ===")
+    print(f"Success: {sum(1 for _, r in results if r)}")
+    print(f"Failed: {sum(1 for _, r in results if not r)}")
 
-def check_face_encoding(image_path):
-    try:
-        embedding = DeepFace.represent(
-            image_path,
-            model_name='ArcFace'
-        )[0]['embedding']
-        return True
-    except Exception as e:
-        return False
-
-# Usage
-folder = 'high_confidence'
-results = []
-for filename in os.listdir(folder):
-    if filename.endswith(('.jpg', '.png')):
-        img_path = os.path.join(folder, filename)
-        detected = check_face_encoding(img_path)
-        results.append((filename, detected))
-
-# Pretty print
-print("\n=== Face Detection Results ===")
-print(f"Total images: {len(results)}")
-print("\nDetected Faces:")
-for filename, detected in results:
-    if detected:
-        print(f"  ✓ {filename}")
-print("\nNo Faces Detected:")
-for filename, detected in results:
-    if not detected:
-        print(f"  ✗ {filename}")
-print("==============================")
+folder = 'clemovitch_high_confidence'
+debug_filter_face_images(folder)
