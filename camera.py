@@ -12,15 +12,12 @@ import json
 
 
 
-app = FaceAnalysis(
-    providers=['CUDAExecutionProvider', 'CPUExecutionProvider']
-)
-app.prepare(ctx_id=0, det_size=(320, 320))  # or (320, 320)
+
 
 
 
 class FaceRecognitionCamera:
-    def __init__(self, channel, db_config, save_local=False):
+    def __init__(self, channel, db_config, app, save_local=False):
         self.channel = channel
         self.save_local = save_local
         self.conn = psycopg2.connect(**db_config)
@@ -106,7 +103,7 @@ class FaceRecognitionCamera:
         x2 = min(frame.shape[1], int(x2 + w * 0.5))
         y2 = min(frame.shape[0], int(y2 + h * 0.5))
         face_crop = frame[y1:y2, x1:x2]
-
+        
         person_id = None
         if conf >= 0.7:
             faces_insight = self.app.get(face_crop)
@@ -167,10 +164,11 @@ if __name__ == "__main__":
     }
 
 
-    
+    app = FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+    app.prepare(ctx_id=0, det_size=(320, 320))  # or (320, 320)
 
     channels = ['karii','irissiri129','jinnytty','fanfan','murakamisuigun','maral','michaaam','babybaby1111','etoiles']
-    cameras = [FaceRecognitionCamera(channel, db_config, save_local=True) for channel in channels]
+    cameras = [FaceRecognitionCamera(channel, db_config, app, save_local=True) for channel in channels]
     threads = [threading.Thread(target=cam.run) for cam in cameras]
 
     for t in threads:
