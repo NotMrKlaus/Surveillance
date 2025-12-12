@@ -9,7 +9,7 @@ import time
 import os
 import threading
 import json
-
+from dotenv import load_dotenv
 
 
 
@@ -36,13 +36,12 @@ class FaceRecognitionCamera:
         return streams['best'].url if streams else None
     
     
-    def save_embedding(self, embedding, confidence, filename, threshold=0.6):
+    def save_embedding(self, embedding, confidence, facecrop, filename, threshold=0.6):
         cur = self.conn.cursor()
         emb_str = '[' + ','.join(map(str, embedding.tolist())) + ']'
 
         # Search for similar person (using canonical embeddings only)
         cur.execute("""
-            SET ivfflat.probes = 10;
             SELECT person_id, embedding <-> %s::vector AS dist
             FROM people
             WHERE person_id IS NOT NULL
@@ -51,7 +50,7 @@ class FaceRecognitionCamera:
         """, (emb_str, emb_str))
         row = cur.fetchone()
         if row and row[1] < threshold:
-            person_id = row[0] # Match found
+            person_id = row[0] 
             cur.execute("""
             UPDATE people 
             SET count = count + 1 
@@ -62,12 +61,14 @@ class FaceRecognitionCamera:
         else:
             # Get next person_id
             person_id = None
+            success, buffer = cv2.imencode(".jpg", facecrop, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+            
             cur.execute("""
-                INSERT INTO people (confidence, embedding, image_path, count)
-                VALUES(%s, %s::vector, %s, 1)
+                INSERT INTO people (confidence, embedding, image_path, image, count)
+                VALUES(%s, %s::vector, %s, %s, 1)
                 RETURNING person_id
 
-            """, (confidence, emb_str, filename))
+            """, (confidence, emb_str, filename, psycopg2.Binary(buffer.tobytes())))
             person_id = cur.fetchone()[0]
         # Insert new face (non-canonical)
         cur.execute("""
@@ -110,16 +111,16 @@ class FaceRecognitionCamera:
             if faces_insight:
                 embedding = faces_insight[0].normed_embedding
                 filename = f"{self.channel}_face_({framenumber}){int(time.time())}.jpg"
-                new_capture_id = self.save_embedding(embedding, conf, filename)
+                new_capture_id = self.save_embedding(embedding, conf, face_crop, filename)
                 print(f"{self.channel} New person capture {new_capture_id} saved")
 
         # Save locally
-        if self.save_local:
-            folder = f'{self.channel}_low_confidence' if 0.5 <= conf < 0.7 else f'{self.channel}_high_confidence' if conf >= 0.7 else None
-            if folder:
-                save_path = f"{folder}/{self.channel}_face_({framenumber}){int(time.time())}.jpg"
-                cv2.imwrite(save_path, face_crop)
-                print(f"{self.channel} Saved to {folder}: {conf:.2f}")
+        #if self.save_local:
+        #    folder = f'{self.channel}_low_confidence' if 0.5 <= conf < 0.7 else f'{self.channel}_high_confidence' if conf >= 0.7 else None
+        #    if folder:
+        #        save_path = f"{folder}/{self.channel}_face_({framenumber}){int(time.time())}.jpg"
+        #        cv2.imwrite(save_path, face_crop)
+        #        print(f"{self.channel} Saved to {folder}: {conf:.2f}")
 
     def run(self):
         url = self.get_stream_url()
@@ -151,21 +152,22 @@ class FaceRecognitionCamera:
         cap.release()
 
 
-# === USAGE ===
+# === USAGE FOR TESTING ===
 if __name__ == "__main__":
 
+    load_dotenv()
 
     db_config = {
-    "host": "db.aulbtbeaabfwlnwycvsz.supabase.co",
-    "port": 5432,        # ← Standard PostgreSQL port
-    "dbname": "postgres",
-    "user": "postgres",
-    "password": "everythingislowercasee"
-    }
+    "host": os.getenv("DB_HOST"),
+    "port": int(os.getenv("DB_PORT")),
+    "dbname": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD")
+}
 
 
     app = FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-    app.prepare(ctx_id=0, det_size=(320, 320))  # or (320, 320)
+    app.prepare(ctx_id=0, det_size=(320, 320))  
 
     channels = ['karii','irissiri129','jinnytty','fanfan','murakamisuigun','maral','michaaam','babybaby1111','etoiles']
     cameras = [FaceRecognitionCamera(channel, db_config, app, save_local=True) for channel in channels]
