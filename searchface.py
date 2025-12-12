@@ -7,16 +7,20 @@ import psycopg2
 import cv2
 from insightface.app import FaceAnalysis
 
+#Load database credentials
 load_dotenv()
 
+#argument check
 if len(sys.argv) < 2:
     print("Usage: python search_by_face.py <image1.jpg> [image2.png ...]")
     sys.exit(1)
 
 images = sys.argv[1:]
 
+
+#Initialize facial recognition model
 app = FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-app.prepare(ctx_id=0, det_size=(640, 640))
+app.prepare(ctx_id=0, det_size=(320, 320))
 
 def get_face_embedding(path):
     img = cv2.imread(path)
@@ -25,6 +29,8 @@ def get_face_embedding(path):
     faces = app.get(img)
     return faces[0].normed_embedding if faces else None
 
+
+#connect
 conn = psycopg2.connect(
     host=os.getenv("DB_HOST"),
     port=os.getenv("DB_PORT"),
@@ -49,7 +55,7 @@ for img_path in images:
         continue
 
     emb_str = '[' + ','.join(map(str, emb.tolist())) + ']'
-
+# Find closest canonical person using cosine distance (pgvector <-> operator)
     cur.execute("""
         SELECT person_id, embedding <-> %s::vector
         FROM people
@@ -69,9 +75,10 @@ for img_path in images:
 
     print(f"{filename:<35} {pid:>10} {similarity:>10.1%}     {result}")
 
+# Clean up DB connection
 cur.close()
 conn.close()
-
+# Summarize
 print("\n" + "═" * 78)
 if matched_ids:
     print("STRONG MATCHES FOUND (similarity > 40% / distance < 0.6)")

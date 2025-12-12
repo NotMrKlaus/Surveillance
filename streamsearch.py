@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 import psycopg2
 from datetime import date, timedelta
 
+
+# Load Database
 load_dotenv()
 
 def parse_date(text):
@@ -54,6 +56,8 @@ if start > end:
 
 print(f"\nSearching '{channel}' from {start} to {end}\n")
 
+# Connect
+
 conn = psycopg2.connect(**{
     "host": os.getenv("DB_HOST"),
     "port": os.getenv("DB_PORT"),
@@ -61,6 +65,9 @@ conn = psycopg2.connect(**{
     "user": os.getenv("DB_USER"),
     "password": os.getenv("DB_PASSWORD")
 })
+
+
+# Query: for each known person, count appearances and average confidence in the period
 
 cur = conn.cursor()
 cur.execute("""
@@ -80,6 +87,8 @@ cur.execute("""
 
 rows = cur.fetchall()
 
+
+# table output
 if not rows:
     print("No known people found.")
 else:

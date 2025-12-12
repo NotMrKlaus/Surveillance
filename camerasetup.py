@@ -33,7 +33,7 @@ app = FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
 app.prepare(ctx_id=0, det_size=(320, 320))
 
 # Create and start cameras
-cameras = [FaceRecognitionCamera(ch, db_config, app, save_local=True) for ch in channels]
+cameras = [FaceRecognitionCamera(ch, db_config, app, save_local=False) for ch in channels]
 threads = [threading.Thread(target=cam.run, daemon=True) for cam in cameras]
 
 for t in threads:

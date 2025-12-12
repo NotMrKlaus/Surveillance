@@ -11,20 +11,32 @@ import threading
 import json
 from dotenv import load_dotenv
 
+"""
+FaceRecognitionCamera – Real-time Twitch face recognition & clustering pipeline
 
+Features:
+- Streams Twitch channels via streamlink
+- Detects faces with YOLOv8n-face
+- Extracts normalized 512-dim embeddings with InsightFace (ArcFace)
+- Clusters faces using pgvector cosine distance in PostgreSQL
+- Maintains canonical "people" table + all detections in "faces" table
+- Optional local saving of low/high confidence crops
+
+Requirements:
+    pip install opencv-python streamlink ultralytics insightface psycopg2-binary python-dotenv numpy
+    # PostgreSQL with vector extension enabled
+"""
 
 
 
 
 class FaceRecognitionCamera:
     def __init__(self, channel, db_config, app, save_local=False):
-        self.channel = channel
-        self.save_local = save_local
-        self.conn = psycopg2.connect(**db_config)
-        #self.app = FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-        #self.app.prepare(ctx_id=0, det_size=(320, 320))
-        self.app = app
-        self.model = YOLO('yolov8n-face.pt')
+        self.channel = channel                                              #name of the chanel that the camera instanec is following
+        self.save_local = save_local                                        #saves facial images onto user computer as well as the database
+        self.conn = psycopg2.connect(**db_config)                           #connection to database
+        self.app = app                                                      #facial recognition model
+        self.model = YOLO('yolov8n-face.pt')                                #facial detection model
 
         if self.save_local:
             os.makedirs(f'{channel}_low_confidence', exist_ok=True)
@@ -94,6 +106,8 @@ class FaceRecognitionCamera:
         cur.close()
         return face_id
 """
+
+        #Processes the faces that are outputted by the facial detection model. Face will be recorded into the database if image quality if high enough. 
     def process_face(self, face, frame, framenumber):
         conf = float(face.conf)
         box = tuple(map(int, face.xyxy[0]))
@@ -114,13 +128,13 @@ class FaceRecognitionCamera:
                 new_capture_id = self.save_embedding(embedding, conf, face_crop, filename)
                 print(f"{self.channel} New person capture {new_capture_id} saved")
 
-        # Save locally
-        #if self.save_local:
-        #    folder = f'{self.channel}_low_confidence' if 0.5 <= conf < 0.7 else f'{self.channel}_high_confidence' if conf >= 0.7 else None
-        #    if folder:
-        #        save_path = f"{folder}/{self.channel}_face_({framenumber}){int(time.time())}.jpg"
-        #        cv2.imwrite(save_path, face_crop)
-        #        print(f"{self.channel} Saved to {folder}: {conf:.2f}")
+        #Save locally uncomment if you want to save
+        if self.save_local:
+            folder = f'{self.channel}_low_confidence' if 0.5 <= conf < 0.7 else f'{self.channel}_high_confidence' if conf >= 0.7 else None
+            if folder:
+                save_path = f"{folder}/{self.channel}_face_({framenumber}){int(time.time())}.jpg"
+                cv2.imwrite(save_path, face_crop)
+                print(f"{self.channel} Saved to {folder}: {conf:.2f}")
 
     def run(self):
         url = self.get_stream_url()

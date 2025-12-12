@@ -9,8 +9,11 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 
+
+#Load database credentials
 load_dotenv()
 
+#Show how to
 if len(sys.argv) < 3 or sys.argv[1] in ("-h", "--help"):
     print("Usage: python save_person_images.py <output_folder> <id1> [id2 id3 range ...] [all]")
     print("Examples:")
@@ -52,7 +55,7 @@ conn = psycopg2.connect(
 cur = conn.cursor()
 
 print(f"Saving to: {os.path.abspath(output_folder)}\n")
-
+#Query all people that have stored images
 if has_all:
     print("Exporting ALL people with images...")
     cur.execute("SELECT person_id, image FROM people WHERE image IS NOT NULL")
@@ -75,6 +78,8 @@ if not rows:
     print("No images found for the given person IDs.")
     sys.exit(0)
 
+    
+#save photos to folder
 saved = 0
 for person_id, img_data in rows:
     person_dir = os.path.join(output_folder, str(person_id))
