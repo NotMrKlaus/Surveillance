@@ -1,4 +1,3 @@
-# search_by_face.py – FINAL, beautiful, and fully correct
 
 import sys
 import os

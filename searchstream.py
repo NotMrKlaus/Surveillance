@@ -54,7 +54,6 @@ except Exception as e:
 if start > end:
     start, end = end, start
 
-print(f"\nSearching '{channel}' from {start} to {end}\n")
 
 # Connect
 
@@ -65,6 +64,9 @@ conn = psycopg2.connect(**{
     "user": os.getenv("DB_USER"),
     "password": os.getenv("DB_PASSWORD")
 })
+
+print(f"\nSearching '{channel}' from {start} to {end}\n")
+
 
 
 # Query: for each known person, count appearances and average confidence in the period
